@@ -1,0 +1,5 @@
+NewsProject/myvenv/
+NewsProject/venv/
+
+# Ignore all venv folders in the repository
+**/venv/
