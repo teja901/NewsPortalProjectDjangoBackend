@@ -2,7 +2,10 @@ from django.db import models
 
 # Create your models here.
 class Categories(models.Model):
-    categoryName=models.CharField(max_length=100,null=True,blank=True)
+    categoryName=models.CharField(max_length=100,null=True,blank=True,unique=True)
+    
+    def __str__(self):
+        return f"{self.categoryName}"
 
 
 class AdminEmployeeCredentials(models.Model):
@@ -16,4 +19,4 @@ class AdminEmployeeCredentials(models.Model):
     
 class SubCategories(models.Model):
     category=models.ForeignKey(Categories,on_delete=models.CASCADE,null=True,blank=True,related_name='subcategories')
-    subcategoryName=models.CharField(max_length=100,null=True,blank=True)
+    subcategoryName=models.CharField(max_length=100,null=True,blank=True,unique=True)

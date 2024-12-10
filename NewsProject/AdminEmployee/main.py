@@ -1,3 +1,4 @@
+from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
 from ninja import NinjaAPI ,File ,UploadedFile,Form
 from pydantic import ValidationError
@@ -31,39 +32,46 @@ def create_admin_employee(request,name:str=Form(...)):
    
    
 # Create Category in DB.......................
-@api.post('createcategory',response={201:CategorySchema})
+@api.post('createcategory',response={201:List[CategorySchema]})
 def createCategory(request):
     data=request.POST.dict()
-    category=Categories.objects.create(**data)
-    return category
+    try:
+     category=Categories.objects.create(**data)
+    except:
+        return JsonResponse({'data':"Category Already Exists"},status=400)
+    return Categories.objects.all()
+
+@api.get('getAllCategoriesSubCategories',response={200:List[CategorySchema]})
+def getAllCategoriesSubCategories(request):
+    return Categories.objects.all()
+   
+   
+# Delete Category By NAme {Associated Sub Categories Will deleted automatically}................
+@api.delete("deleteCategoryByName/{name}",response={200:List[CategorySchema]})
+def deleteCategoryByName(request,name:str):
+    try:
+     category=Categories.objects.get(categoryName=name)
+     category.delete()
+    except: return JsonResponse({"data":"No Records Found"},status=404)
+    return Categories.objects.all()
 
 #Create a SubCAtegory......................................
-@api.post('createSubCategory',response={201:SubCategorySchema})
+@api.post('createSubCategory',response={201:List[CategorySchema]})
 def createSubcategory(request):
     data=request.POST.dict()
     category_id=data.get('category')
-    # print(category_id)
-    # print(data.get('subcategoryName'))
     try:
      cresult=Categories.objects.get(id=category_id)
      subcategory=SubCategories.objects.create(subcategoryName=data.get('subcategoryName'),category=cresult)
-    except :
-        return JsonResponse({"data":"No Records Found"},status=404)
-    return subcategory
-
+    except IntegrityError as e:return JsonResponse({'data':"SubCategory Already Exists"},status=400)
+    except :return JsonResponse({"data":"No Category Records Found"},status=404)
+    return Categories.objects.all()
 
 # Get CAtegory and their associated SubCategories By Name........
-@api.get('/getCategorySubCategoriesByName/{name}')
+@api.get('/getCategorySubCategoriesByName/{name}',response=CategorySchema)
 def getCategorySubCategoriesByName(request,name:str):
-    try:
-     category=Categories.objects.get(categoryName=name)
-     subcategories = category.subcategories.values("id", "subcategoryName")
-     return {
-            "categoryName": category.categoryName,
-            "subcategories": list(subcategories)
-        }
-    except:
-        return JsonResponse({"data":"No Records Found"},status=404)
+    try:return Categories.objects.get(categoryName=name)
+    except:return JsonResponse({"data":"No Records Found"},status=404)
      
 # Get Only SubCategory BY NAMe.............................
 @api.get('getSubCategoryByName/{name}',response=SubCategorySchema)
@@ -72,14 +80,16 @@ def getSubCategoriesByName(request,name:str):
   except:return JsonResponse({"data":"No Records Found"},status=404)
   return subcategory
 
-# Delete Category By NAme {Associated Sub Categories Will deleted automatically}................
-@api.delete("deleteCategoryByName/{name}")
-def deleteCategoryByName(request,name:str):
+@api.delete('deleteSubCategoryByName/{subcategoryname}',response={200:List[CategorySchema]})
+def deleteSubCategoryByName(request,subcategoryname : str):
     try:
-     category=Categories.objects.get(categoryName=name)
-     category.delete()
+     subcategory=SubCategories.objects.get(subcategoryName=subcategoryname)
+     subcategory.delete()
     except: return JsonResponse({"data":"No Records Found"},status=404)
-    return {"data": "Category deleted successfully!"}
+    return Categories.objects.all()
+    
+    
+
     
     
      
