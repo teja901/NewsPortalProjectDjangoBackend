@@ -8,8 +8,11 @@ COPY requirements.txt .
 # Install Python dependencies from requirements.txt
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
+# Install Redis
+RUN apt-get update && apt-get install -y redis-server
+
 COPY . .
 
 EXPOSE 8000
 
-CMD ["uvicorn", "NewsProject.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

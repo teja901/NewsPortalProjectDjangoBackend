@@ -12,3 +12,4 @@ services:
       - .:/app  
     environment:
       - DJANGO_SETTINGS_MODULE=NewsProject.settings
+

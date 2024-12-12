@@ -11,10 +11,26 @@ import json
 api = NinjaAPI()
 
 
+def redis():
+        redis_client = redis.StrictRedis(
+        host=settings.CHANNEL_LAYERS['default']['CONFIG']['hosts'][0][0],
+        port=settings.CHANNEL_LAYERS['default']['CONFIG']['hosts'][0][1],
+        db=0
+    )
+
+    # Fetch all keys that represent channel groups
+        group_keys = redis_client.keys("asgi:group:*")
+        group_names = [key.decode("utf-8").replace("asgi:group:", "") for key in group_keys]
+        print(group_names)
+        print(group_keys)
+
+
 @api.get('validateAdminEmployee/{username}/{password}',response=AdminEmployeeGetSchema)
 def getAdminEmployeeCredentials(request,username :str,password :str):
     try:
         employee = get_object_or_404(AdminEmployeeCredentials, name=username, password=password)
+        if not employee.status:
+            return JsonResponse({"detail": "UnAuthorised"}, status=403)
     except:
         return JsonResponse({"detail": "Invalid Credentials"}, status=404)
     return employee
@@ -88,10 +104,52 @@ def deleteSubCategoryByName(request,subcategoryname : str):
     except: return JsonResponse({"data":"No Records Found"},status=404)
     return Categories.objects.all()
     
-    
 
+from asgiref.sync import sync_to_async
+from channels.layers import get_channel_layer
+from django.conf import settings
+import redis
+
+
+@sync_to_async
+def toggle_employee_status_in_db(emp_id):
+    emp_obj = AdminEmployeeCredentials.objects.get(id=emp_id)
+    emp_obj.status = not emp_obj.status
+    emp_obj.save()
+    return emp_obj.status
+
+@api.get("toggeleEmployeeStatus/{empId}")
+async def toggle_employee_status(request, empId):
+   
+    try:
+        updated_status = await toggle_employee_status_in_db(empId)
+        channel_layer = get_channel_layer()
+        group_name = f"Editor_{empId}"
+     
+       
+        if channel_layer:
+            await channel_layer.group_send(
+                group_name,
+                {
+                    'type': 'chat_message',
+                    'status': updated_status
+                }
+            )
+
+        return JsonResponse({'data': "Success", 'status': updated_status}, status=200)
+
+    except AdminEmployeeCredentials.DoesNotExist:
+        return JsonResponse({'error': 'Employee not found'}, status=404)
     
-    
+async def employee_status_update(self, updated_status):
+       
+        print(f"Received status update: {updated_status}")
+
+        # Send response to WebSocket
+        await self.send(text_data=json.dumps({
+            'status': updated_status,
+        }))
+
      
     
          

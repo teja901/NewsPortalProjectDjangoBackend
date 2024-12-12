@@ -32,6 +32,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -41,10 +42,23 @@ INSTALLED_APPS = [
     'AdminEmployee',
     'corsheaders', 
     'ninja',
+    'channels',
+    
 ]
 CORS_ALLOW_ALL_ORIGINS = True 
 # In your Django settings file (settings.py)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10 MB, adjust as needed
+
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],  
+        },
+    },
+}
+
 
 
 MIDDLEWARE = [
